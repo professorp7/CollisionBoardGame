@@ -19,6 +19,7 @@ export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   characterIds: jsonb("character_ids").notNull().$type<number[]>(),
+  characterAbilities: jsonb("character_abilities").notNull().$type<Record<number, string[]>>(), // Maps character IDs to ability IDs
 });
 
 // Battle Schema

@@ -77,15 +77,6 @@ export default function CharacterForm({ character, onSave, onCancel }: Character
   };
   
   const handleAddAbility = () => {
-    if (abilities.length >= 7) {
-      toast({
-        title: "Limit Reached",
-        description: "Maximum 7 abilities per character",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     const newAbility: Ability = {
       id: Date.now().toString(),
       name: "New Ability",
@@ -190,7 +181,7 @@ export default function CharacterForm({ character, onSave, onCancel }: Character
             {/* Character Abilities */}
             <div>
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-heading font-medium">Abilities ({abilities.length}/7)</h3>
+                <h3 className="font-heading font-medium">Abilities ({abilities.length})</h3>
                 <Button 
                   type="button" 
                   variant="link" 

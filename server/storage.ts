@@ -2,29 +2,47 @@ import {
   Character, 
   Team, 
   Battle, 
+  User,
   InsertCharacter, 
   InsertTeam, 
-  InsertBattle
+  InsertBattle,
+  InsertUser
 } from "@shared/schema";
+import session from "express-session";
+import createMemoryStore from "memorystore";
+
+const MemoryStore = createMemoryStore(session);
 
 // Interface for storage operations
 export interface IStorage {
+  // Session store for authentication
+  sessionStore: session.Store;
+  
+  // User operations
+  getUsers(): Promise<User[]>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  
   // Character operations
-  getCharacters(): Promise<Character[]>;
+  getCharacters(userId?: number): Promise<Character[]>;
+  getPublicCharacters(): Promise<Character[]>;
   getCharacter(id: number): Promise<Character | undefined>;
   createCharacter(character: InsertCharacter): Promise<Character>;
   updateCharacter(id: number, character: Partial<InsertCharacter>): Promise<Character | undefined>;
   deleteCharacter(id: number): Promise<boolean>;
   
   // Team operations
-  getTeams(): Promise<Team[]>;
+  getTeams(userId?: number): Promise<Team[]>;
   getTeam(id: number): Promise<Team | undefined>;
   createTeam(team: InsertTeam): Promise<Team>;
   updateTeam(id: number, team: Partial<InsertTeam>): Promise<Team | undefined>;
   deleteTeam(id: number): Promise<boolean>;
   
   // Battle operations
-  getBattles(): Promise<Battle[]>;
+  getBattles(userId?: number): Promise<Battle[]>;
   getBattle(id: number): Promise<Battle | undefined>;
   createBattle(battle: InsertBattle): Promise<Battle>;
   updateBattle(id: number, battle: Partial<InsertBattle>): Promise<Battle | undefined>;
@@ -33,25 +51,79 @@ export interface IStorage {
 
 // In-memory storage implementation
 export class MemStorage implements IStorage {
+  private users: Map<number, User>;
   private characters: Map<number, Character>;
   private teams: Map<number, Team>;
   private battles: Map<number, Battle>;
+  private userIdCounter: number;
   private characterIdCounter: number;
   private teamIdCounter: number;
   private battleIdCounter: number;
+  public sessionStore: session.Store;
 
   constructor() {
+    this.users = new Map();
     this.characters = new Map();
     this.teams = new Map();
     this.battles = new Map();
+    this.userIdCounter = 1;
     this.characterIdCounter = 1;
     this.teamIdCounter = 1;
     this.battleIdCounter = 1;
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // Clear expired sessions every 24h
+    });
+  }
+
+  // User methods
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username
+    );
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const id = this.userIdCounter++;
+    const createdAt = new Date();
+    const newUser: User = { ...user, id, createdAt, isPublic: false };
+    this.users.set(id, newUser);
+    return newUser;
+  }
+
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) return undefined;
+
+    const updatedUser = { ...existingUser, ...user };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    return this.users.delete(id);
   }
 
   // Character methods
-  async getCharacters(): Promise<Character[]> {
-    return Array.from(this.characters.values());
+  async getCharacters(userId?: number): Promise<Character[]> {
+    const characters = Array.from(this.characters.values());
+    if (userId !== undefined) {
+      return characters.filter(character => character.userId === userId);
+    }
+    return characters;
+  }
+
+  async getPublicCharacters(): Promise<Character[]> {
+    return Array.from(this.characters.values()).filter(
+      (character) => character.isPublic
+    );
   }
 
   async getCharacter(id: number): Promise<Character | undefined> {
@@ -60,7 +132,13 @@ export class MemStorage implements IStorage {
 
   async createCharacter(character: InsertCharacter): Promise<Character> {
     const id = this.characterIdCounter++;
-    const newCharacter: Character = { ...character, id };
+    const createdAt = new Date();
+    const newCharacter: Character = { 
+      ...character, 
+      id, 
+      createdAt,
+      isPublic: character.isPublic || false
+    };
     this.characters.set(id, newCharacter);
     return newCharacter;
   }
@@ -79,8 +157,12 @@ export class MemStorage implements IStorage {
   }
 
   // Team methods
-  async getTeams(): Promise<Team[]> {
-    return Array.from(this.teams.values());
+  async getTeams(userId?: number): Promise<Team[]> {
+    const teams = Array.from(this.teams.values());
+    if (userId !== undefined) {
+      return teams.filter(team => team.userId === userId);
+    }
+    return teams;
   }
 
   async getTeam(id: number): Promise<Team | undefined> {
@@ -89,9 +171,10 @@ export class MemStorage implements IStorage {
 
   async createTeam(team: InsertTeam): Promise<Team> {
     const id = this.teamIdCounter++;
+    const createdAt = new Date();
     // Initialize characterAbilities if not provided
     const characterAbilities = team.characterAbilities || {};
-    const newTeam: Team = { ...team, characterAbilities, id };
+    const newTeam: Team = { ...team, characterAbilities, id, createdAt };
     this.teams.set(id, newTeam);
     return newTeam;
   }
@@ -110,8 +193,12 @@ export class MemStorage implements IStorage {
   }
 
   // Battle methods
-  async getBattles(): Promise<Battle[]> {
-    return Array.from(this.battles.values());
+  async getBattles(userId?: number): Promise<Battle[]> {
+    const battles = Array.from(this.battles.values());
+    if (userId !== undefined) {
+      return battles.filter(battle => battle.userId === userId);
+    }
+    return battles;
   }
 
   async getBattle(id: number): Promise<Battle | undefined> {
@@ -120,7 +207,13 @@ export class MemStorage implements IStorage {
 
   async createBattle(battle: InsertBattle): Promise<Battle> {
     const id = this.battleIdCounter++;
-    const newBattle: Battle = { ...battle, id };
+    const createdAt = new Date();
+    const newBattle: Battle = { 
+      ...battle, 
+      id, 
+      createdAt,
+      currentTurn: battle.currentTurn || 1
+    };
     this.battles.set(id, newBattle);
     return newBattle;
   }

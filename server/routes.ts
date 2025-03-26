@@ -7,12 +7,27 @@ import {
   insertTeamSchema, 
   insertBattleSchema 
 } from "@shared/schema";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  setupAuth(app);
   // Character routes
-  app.get("/api/characters", async (_req, res) => {
+  app.get("/api/characters", async (req, res) => {
     try {
-      const characters = await storage.getCharacters();
+      let characters;
+      
+      if (req.query.public === "true") {
+        // Return public characters
+        characters = await storage.getPublicCharacters();
+      } else if (req.isAuthenticated()) {
+        // Return user's characters
+        characters = await storage.getCharacters(req.user!.id);
+      } else {
+        // Return empty array if not authenticated and not asking for public
+        characters = [];
+      }
+      
       res.json(characters);
     } catch (error) {
       res.status(500).json({ message: "Failed to get characters", error });
@@ -39,7 +54,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/characters", async (req, res) => {
     try {
-      const characterData = insertCharacterSchema.parse(req.body);
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const characterData = insertCharacterSchema.parse({
+        ...req.body,
+        userId: req.user!.id // Add the current user's ID
+      });
+      
       const newCharacter = await storage.createCharacter(characterData);
       res.status(201).json(newCharacter);
     } catch (error) {
@@ -92,9 +115,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Team routes
-  app.get("/api/teams", async (_req, res) => {
+  app.get("/api/teams", async (req, res) => {
     try {
-      const teams = await storage.getTeams();
+      let teams;
+      
+      if (req.isAuthenticated()) {
+        // Return user's teams
+        teams = await storage.getTeams(req.user!.id);
+      } else {
+        // Return empty array if not authenticated
+        teams = [];
+      }
+      
       res.json(teams);
     } catch (error) {
       res.status(500).json({ message: "Failed to get teams", error });
@@ -121,7 +153,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/teams", async (req, res) => {
     try {
-      const teamData = insertTeamSchema.parse(req.body);
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const teamData = insertTeamSchema.parse({
+        ...req.body,
+        userId: req.user!.id // Add the current user's ID
+      });
+      
       const newTeam = await storage.createTeam(teamData);
       res.status(201).json(newTeam);
     } catch (error) {
@@ -174,9 +214,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Battle routes
-  app.get("/api/battles", async (_req, res) => {
+  app.get("/api/battles", async (req, res) => {
     try {
-      const battles = await storage.getBattles();
+      let battles;
+      
+      if (req.isAuthenticated()) {
+        // Return user's battles
+        battles = await storage.getBattles(req.user!.id);
+      } else {
+        // Return empty array if not authenticated
+        battles = [];
+      }
+      
       res.json(battles);
     } catch (error) {
       res.status(500).json({ message: "Failed to get battles", error });

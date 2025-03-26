@@ -55,6 +55,83 @@ export default function BattleCharacter({
   const handleStatusChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdateStatus(e.target.value);
   };
+  
+  return (
+    <div className={`
+      p-4 rounded-lg border-2 transition-colors
+      ${isActive ? 'border-primary bg-primary/10' : 'border-gray-700 bg-gray-800/50'}
+      ${isOpponent ? 'border-red-500/50' : ''}
+    `}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-medium">{character.name}</h3>
+        <span className="text-sm bg-gray-700 px-2 py-1 rounded">
+          Turn {turnOrder}
+        </span>
+      </div>
+      
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2 mb-3 text-sm">
+        <div className="bg-gray-700/50 p-2 rounded">
+          <div className="text-gray-400">Initiative</div>
+          <div>{character.initiative}</div>
+        </div>
+        <div className="bg-gray-700/50 p-2 rounded">
+          <div className="text-gray-400">Speed</div>
+          <div>{character.speed}</div>
+        </div>
+        <div className="bg-gray-700/50 p-2 rounded">
+          <div className="text-gray-400">AC</div>
+          <div>{character.ac}</div>
+        </div>
+      </div>
+
+      {/* HP Bar */}
+      <div className="mb-3">
+        <div className="flex justify-between text-sm mb-1">
+          <span>HP</span>
+          <span>{currentHp} / {character.hp}</span>
+        </div>
+        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div 
+            className={`h-full ${healthBarColor} transition-all`}
+            style={{ width: `${hpPercentage}%` }}
+          />
+        </div>
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => handleHpChange(-1)}
+            className="px-2 py-1 bg-red-500/20 rounded hover:bg-red-500/30"
+          >
+            -1
+          </button>
+          <input
+            type="number"
+            value={currentHp}
+            onChange={handleHpInput}
+            className="w-16 bg-gray-700 rounded px-2 text-center"
+          />
+          <button
+            onClick={() => handleHpChange(1)}
+            className="px-2 py-1 bg-green-500/20 rounded hover:bg-green-500/30"
+          >
+            +1
+          </button>
+        </div>
+      </div>
+
+      {/* Status */}
+      <div>
+        <label className="text-sm text-gray-400 block mb-1">Status</label>
+        <input
+          type="text"
+          value={status}
+          onChange={handleStatusChange}
+          placeholder="Enter status effects..."
+          className="w-full bg-gray-700 rounded px-3 py-1"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <Collapsible 

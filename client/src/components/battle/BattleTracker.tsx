@@ -239,14 +239,17 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
   const handleReorderCharacters = useCallback((result: { sourceIndex: number; destinationIndex: number }) => {
     const { sourceIndex, destinationIndex } = result;
     
-    // Make a copy of the battleCharacters array
-    const updatedCharacters = [...battleCharacters];
-    
-    // Remove the dragged item
-    const [draggedItem] = updatedCharacters.splice(sourceIndex, 1);
-    
-    // Add it at the destination
-    updatedCharacters.splice(destinationIndex, 0, draggedItem);
+    setBattleCharacters(prev => {
+      const updated = [...prev];
+      const [draggedItem] = updated.splice(sourceIndex, 1);
+      updated.splice(destinationIndex, 0, draggedItem);
+      
+      // Update turn order numbers
+      return updated.map((char, idx) => ({
+        ...char,
+        turnOrder: idx + 1
+      }));
+    });
     
     // Update the turn order for all characters
     updatedCharacters.forEach((char, index) => {

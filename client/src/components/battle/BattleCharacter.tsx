@@ -1,7 +1,10 @@
-import { Character } from "@shared/schema";
+import { Character, Ability } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DraggableItemProps } from "@/components/ui/draggable";
 
 interface BattleCharacterProps {
   character: Character;
@@ -12,6 +15,8 @@ interface BattleCharacterProps {
   isOpponent?: boolean;
   onUpdateHp: (hp: number) => void;
   onUpdateStatus: (status: string) => void;
+  onUseAbility?: (ability: Ability) => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 export default function BattleCharacter({
@@ -22,8 +27,16 @@ export default function BattleCharacter({
   isActive,
   isOpponent = false,
   onUpdateHp,
-  onUpdateStatus
+  onUpdateStatus,
+  onUseAbility,
+  dragHandleProps
 }: BattleCharacterProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Calculate HP percentage for health bar
+  const hpPercentage = Math.max(0, Math.min(100, (currentHp / character.hp) * 100));
+  const healthBarColor = hpPercentage > 60 ? 'bg-green-500' : hpPercentage > 30 ? 'bg-amber-500' : 'bg-red-500';
+  
   // Handle updating HP with +/- buttons
   const handleHpChange = (amount: number) => {
     const newHp = Math.max(0, currentHp + amount);
@@ -44,68 +57,156 @@ export default function BattleCharacter({
   };
 
   return (
-    <div className={`battle-character bg-battleui-light rounded-md p-3 relative overflow-hidden ${isActive ? 'ring-2 ring-offset-0 ring-primary/50' : ''}`}>
-      {isActive && (
-        <div className={`absolute top-0 left-0 w-1 h-full ${isOpponent ? 'bg-error' : 'bg-primary'}`}></div>
-      )}
-      <div className="flex justify-between">
-        <span className="font-medium">{character.name}</span>
-        <span className={`turn-indicator text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ${
-          isActive 
-            ? isOpponent ? 'bg-error' : 'bg-primary' 
-            : 'bg-gray-600'
-        }`}>
-          {turnOrder}
-        </span>
-      </div>
-      <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-        <div>
-          <label className="block text-gray-300 text-xs mb-1">HP</label>
-          <div className="flex">
-            <Button
-              size="sm"
-              variant="outline"
-              className="px-2 h-8 bg-battleui border-gray-600 rounded-l-md hover:bg-gray-700 text-white"
-              onClick={() => handleHpChange(-1)}
-            >
-              -
-            </Button>
-            <Input
-              type="number"
-              value={currentHp}
-              onChange={handleHpInput}
-              className="h-8 w-full bg-battleui border-t border-b border-gray-600 text-center text-white"
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              className="px-2 h-8 bg-battleui border-gray-600 rounded-r-md hover:bg-gray-700 text-white"
-              onClick={() => handleHpChange(1)}
-            >
-              +
-            </Button>
+    <Collapsible 
+      open={isExpanded} 
+      onOpenChange={setIsExpanded}
+      className={`battle-character bg-battleui-light rounded-md overflow-hidden transition-shadow ${
+        isActive ? 'ring-2 ring-offset-0 ring-primary/50' : ''
+      } ${
+        isExpanded ? 'shadow-lg' : ''
+      }`}
+    >
+      <div className="relative">
+        {isActive && (
+          <div className={`absolute top-0 left-0 w-1 h-full ${isOpponent ? 'bg-error' : 'bg-primary'}`}></div>
+        )}
+        
+        {/* Character Header with Drag Handle */}
+        <div className="p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div 
+                {...dragHandleProps} 
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-700 cursor-move"
+              >
+                <span className="text-xs">{turnOrder}</span>
+              </div>
+              <span className="font-medium">{character.name}</span>
+              {status && (
+                <Badge variant="outline" className="text-xs border-amber-500 text-amber-400">
+                  {status}
+                </Badge>
+              )}
+            </div>
+            <CollapsibleTrigger asChild>
+              <button className="h-5 w-5 rounded-full hover:bg-gray-700 flex items-center justify-center">
+                <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-xs`}></i>
+              </button>
+            </CollapsibleTrigger>
+          </div>
+          
+          {/* Health Bar */}
+          <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
+            <div 
+              className={`h-full ${healthBarColor} transition-all duration-500`}
+              style={{ width: `${hpPercentage}%` }}
+            ></div>
+          </div>
+          
+          {/* Character Stats */}
+          <div className="mt-2 grid grid-cols-4 gap-1 text-xs text-gray-300">
+            <div>HP: {currentHp}/{character.hp}</div>
+            <div>AC: {character.ac}</div>
+            <div>SPD: {character.speed}</div>
+            <div>INIT: {character.initiative}</div>
           </div>
         </div>
-        <div>
-          <label className="block text-gray-300 text-xs mb-1">Status</label>
-          <Input
-            type="text"
-            value={status}
-            onChange={handleStatusChange}
-            placeholder="None"
-            className="h-8 w-full bg-battleui border-gray-600 text-white"
-          />
-        </div>
-        <div>
-          <label className="block text-gray-300 text-xs mb-1">Actions</label>
-          <Button
-            size="sm"
-            className={`w-full h-8 text-white text-xs ${isOpponent ? 'bg-error hover:bg-error/90' : 'bg-primary hover:bg-primary/90'}`}
-          >
-            Abilities
-          </Button>
-        </div>
       </div>
-    </div>
+      
+      {/* Collapsible Content */}
+      <CollapsibleContent>
+        <div className="p-3 pt-0 border-t border-gray-700 mt-2">
+          {/* HP Controls */}
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="block text-gray-300 text-xs mb-1">HP</label>
+              <div className="flex">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="px-2 h-8 bg-battleui border-gray-600 rounded-l-md hover:bg-gray-700 text-white"
+                  onClick={() => handleHpChange(-1)}
+                >
+                  -
+                </Button>
+                <Input
+                  type="number"
+                  value={currentHp}
+                  onChange={handleHpInput}
+                  className="h-8 w-full bg-battleui border-t border-b border-gray-600 text-center text-white"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="px-2 h-8 bg-battleui border-gray-600 rounded-r-md hover:bg-gray-700 text-white"
+                  onClick={() => handleHpChange(1)}
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-gray-300 text-xs mb-1">Status</label>
+              <Input
+                type="text"
+                value={status}
+                onChange={handleStatusChange}
+                placeholder="None"
+                className="h-8 w-full bg-battleui border-gray-600 text-white"
+              />
+            </div>
+          </div>
+          
+          {/* Abilities Section */}
+          <div>
+            <label className="block text-gray-300 text-xs mb-2">Abilities</label>
+            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+              {character.abilities.map(ability => (
+                <div 
+                  key={ability.id}
+                  className={`p-2 rounded-md border border-gray-700 hover:border-primary cursor-pointer ${
+                    ability.isPassive ? 'bg-gray-700/50' : 'bg-gray-800/50'
+                  }`}
+                  onClick={() => onUseAbility && !ability.isPassive && onUseAbility(ability)}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">{ability.name}</span>
+                    {ability.isPassive ? (
+                      <Badge variant="outline" className="text-xs">Passive</Badge>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-6 px-2 text-xs hover:bg-primary/20"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUseAbility && onUseAbility(ability);
+                        }}
+                      >
+                        Use
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">{ability.description}</p>
+                  {(ability.damage || ability.range || ability.effect) && (
+                    <div className="grid grid-cols-3 gap-1 mt-1 text-xs">
+                      {ability.damage && (
+                        <div className="text-red-400">DMG: {ability.damage}</div>
+                      )}
+                      {ability.range && (
+                        <div className="text-blue-400">RNG: {ability.range}</div>
+                      )}
+                      {ability.effect && (
+                        <div className="text-amber-400">EFF: {ability.effect}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

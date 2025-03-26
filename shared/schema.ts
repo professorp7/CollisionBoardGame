@@ -62,6 +62,7 @@ export type Ability = {
 
 export type BattleCharacterState = {
   characterId: number;
+  uniqueId: string;
   currentHp: number;
   status: string;
   turnOrder: number;

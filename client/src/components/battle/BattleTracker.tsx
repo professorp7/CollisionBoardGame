@@ -17,41 +17,41 @@ interface BattleTrackerProps {
 
 export default function BattleTracker({ characters, onEndBattle }: BattleTrackerProps) {
   const { currentBattle, rollDice, teams } = useAppContext();
-  
+
   // Tabs state
   const [activeTab, setActiveTab] = useState<'battle' | 'setup'>('setup');
-  
+
   // Initial battle state
   const [battleState, setBattleState] = useState<BattleState>({
     allies: [],
     opponents: []
   });
-  
+
   // Team setup state
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [selectedOpponentTeamId, setSelectedOpponentTeamId] = useState<number | null>(null);
   const [battleCharacters, setBattleCharacters] = useState<BattleCharacterState[]>([]);
-  
+
   // Battle state
   const [currentTurn, setCurrentTurn] = useState(1);
   const [showQuickDiceDialog, setShowQuickDiceDialog] = useState(false);
   const [diceResult, setDiceResult] = useState<{ result: number; formula: string } | null>(null);
   const [selectedAbility, setSelectedAbility] = useState<{ ability: Ability; character: Character } | null>(null);
-  
+
   // Load initial battle state from current battle
   useEffect(() => {
     if (currentBattle) {
       setBattleState(currentBattle.battleState as BattleState);
       setCurrentTurn(currentBattle.currentTurn || 1);
-      
+
       if (currentBattle.teamId) {
         setSelectedTeamId(currentBattle.teamId);
       }
-      
+
       if (currentBattle.opponentTeamId) {
         setSelectedOpponentTeamId(currentBattle.opponentTeamId);
       }
-      
+
       // If battle is already in progress, switch to battle tab
       if (
         currentBattle.battleState && 
@@ -64,20 +64,20 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
       }
     }
   }, [currentBattle]);
-  
+
   // Get the character data for a battle character
   const getCharacterById = (id: number) => {
     return characters.find(c => c.id === id);
   };
-  
+
   // Setup teams when selected
   useEffect(() => {
     // Initialize battle characters from selected teams
     const selectedTeam = teams.find(t => t.id === selectedTeamId);
     const opponentTeam = teams.find(t => t.id === selectedOpponentTeamId);
-    
+
     const allBattleCharacters: BattleCharacterState[] = [];
-    
+
     // Add characters from selected team
     if (selectedTeam) {
       selectedTeam.characterIds.forEach((charId, index) => {
@@ -92,7 +92,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
         }
       });
     }
-    
+
     // Add characters from opponent team
     if (opponentTeam) {
       opponentTeam.characterIds.forEach((charId, index) => {
@@ -107,7 +107,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
         }
       });
     }
-    
+
     // Sort by initiative if starting a new battle
     if (battleState.allies.length === 0 && battleState.opponents.length === 0) {
       allBattleCharacters.sort((a, b) => {
@@ -115,31 +115,31 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
         const charB = getCharacterById(b.characterId);
         return (charB?.initiative || 0) - (charA?.initiative || 0);
       });
-      
+
       // Re-assign turn order based on initiative
       allBattleCharacters.forEach((char, index) => {
         char.turnOrder = index + 1;
       });
     }
-    
+
     setBattleCharacters(allBattleCharacters);
   }, [selectedTeamId, selectedOpponentTeamId, teams, characters]);
-  
+
   // Handle starting the battle
   const handleStartBattle = () => {
     if (!selectedTeamId) {
       // Show an error or alert
       return;
     }
-    
+
     // Separate characters into allies and opponents
     const selectedTeam = teams.find(t => t.id === selectedTeamId);
-    
+
     if (!selectedTeam) return;
-    
+
     const allies: BattleCharacterState[] = [];
     const opponents: BattleCharacterState[] = [];
-    
+
     battleCharacters.forEach(char => {
       if (selectedTeam.characterIds.includes(char.characterId)) {
         allies.push(char);
@@ -147,30 +147,30 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
         opponents.push(char);
       }
     });
-    
+
     // Set the battle state
     setBattleState({
       allies,
       opponents
     });
-    
+
     // Switch to battle tab
     setActiveTab('battle');
-    
+
     // Reset turn counter
     setCurrentTurn(1);
   };
-  
+
   // Handle next turn
   const handleNextTurn = () => {
     setCurrentTurn(prevTurn => prevTurn + 1);
   };
-  
+
   // Handle rolling quick dice
   const handleQuickDice = () => {
     setShowQuickDiceDialog(true);
   };
-  
+
   const handleRollDice = (formula: string) => {
     try {
       const { result, breakdown } = rollDice(formula);
@@ -179,7 +179,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
       console.error('Error rolling dice:', error);
     }
   };
-  
+
   // Update a battle character's HP or status
   const updateBattleCharacter = (
     side: 'allies' | 'opponents',
@@ -193,38 +193,38 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
       )
     }));
   };
-  
+
   // Handle using an ability
   const handleUseAbility = (character: Character, ability: Ability) => {
     setSelectedAbility({ character, ability });
-    
+
     // If the ability has a damage formula, roll it automatically
     if (ability.damage) {
       handleRollDice(ability.damage);
       setShowQuickDiceDialog(true);
     }
   };
-  
+
   // Get the current active character
   const getCurrentActiveCharacter = () => {
     // Combine allies and opponents and sort by turn order
     const allBattleCharacters = [...battleState.allies, ...battleState.opponents]
       .sort((a, b) => a.turnOrder - b.turnOrder);
-    
+
     if (allBattleCharacters.length === 0) return null;
-    
+
     // Get the active character based on current turn
     const activeCharacterIndex = (currentTurn - 1) % allBattleCharacters.length;
     const activeCharacter = allBattleCharacters[activeCharacterIndex];
-    
+
     if (!activeCharacter) return null;
-    
+
     const characterData = getCharacterById(activeCharacter.characterId);
     return characterData ? { ...activeCharacter, character: characterData } : null;
   };
-  
+
   const activeCharacter = getCurrentActiveCharacter();
-  
+
   // Get the side (allies or opponents) for a character
   const getCharacterSide = (characterId: number): 'allies' | 'opponents' | null => {
     if (battleState.allies.some(c => c.characterId === characterId)) {
@@ -234,51 +234,29 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
     }
     return null;
   };
-  
+
   // Handle reordering characters via drag and drop
   const handleReorderCharacters = useCallback((result: { sourceIndex: number; destinationIndex: number }) => {
-    const { sourceIndex, destinationIndex } = result;
-    
-    setBattleCharacters(prev => {
-      const updated = [...prev];
-      const [draggedItem] = updated.splice(sourceIndex, 1);
-      updated.splice(destinationIndex, 0, draggedItem);
-      
-      // Update turn order numbers
+    if (typeof result.sourceIndex !== 'number' || typeof result.destinationIndex !== 'number') {
+      console.error("Invalid drag result:", result);
+      return;
+    }
+
+    setBattleCharacters(prevChars => {
+      const updated = [...prevChars];
+      const [draggedItem] = updated.splice(result.sourceIndex, 1);
+      updated.splice(result.destinationIndex, 0, {
+        ...draggedItem,
+        uniqueId: draggedItem.uniqueId || `${draggedItem.characterId}-${Date.now()}`
+      });
+
+      // Update turn order
       return updated.map((char, idx) => ({
         ...char,
         turnOrder: idx + 1
       }));
     });
-    
-    // Update the turn order for all characters
-    updatedCharacters.forEach((char, index) => {
-      char.turnOrder = index + 1;
-    });
-    
-    // Update state
-    setBattleCharacters(updatedCharacters);
-    
-    // Also update the turn order in the battle state if in battle mode
-    if (activeTab === 'battle') {
-      setBattleState(prev => {
-        const newAllies = prev.allies.map(char => {
-          const updatedChar = updatedCharacters.find(c => c.characterId === char.characterId);
-          return updatedChar ? { ...char, turnOrder: updatedChar.turnOrder } : char;
-        });
-        
-        const newOpponents = prev.opponents.map(char => {
-          const updatedChar = updatedCharacters.find(c => c.characterId === char.characterId);
-          return updatedChar ? { ...char, turnOrder: updatedChar.turnOrder } : char;
-        });
-        
-        return {
-          allies: newAllies,
-          opponents: newOpponents
-        };
-      });
-    }
-  }, [battleCharacters, activeTab]);
+  }, []);
 
   return (
     <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg text-white p-4 md:p-5">
@@ -292,7 +270,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
               Battle Arena
             </TabsTrigger>
           </TabsList>
-          
+
           <div>
             {activeTab === 'setup' ? (
               <Button onClick={handleStartBattle} disabled={!selectedTeamId}>
@@ -323,7 +301,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
             )}
           </div>
         </div>
-        
+
         <TabsContent value="setup" className="mt-0">
           <div className="bg-gray-800 rounded-lg p-4 mb-6">
             <h3 className="font-heading text-xl mb-4">Battle Setup</h3>
@@ -357,7 +335,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
                   )}
                 </div>
               </div>
-              
+
               {/* Opponent Team Selection */}
               <div>
                 <Label className="text-sm text-gray-300 mb-2 block">Select Opponent Team</Label>
@@ -378,7 +356,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
                       </div>
                     </div>
                   ))}
-                  
+
                   {teams.length <= 1 && (
                     <div className="text-center p-6 border border-dashed border-gray-700 rounded-md">
                       <p className="text-gray-400">No opponent teams available</p>
@@ -389,7 +367,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
               </div>
             </div>
           </div>
-          
+
           {/* Turn Order Adjustment */}
           {battleCharacters.length > 0 && (
             <div className="bg-gray-800 rounded-lg p-4">
@@ -400,7 +378,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
                   (Drag to reorder)
                 </span>
               </h3>
-              
+
               <Droppable
                 id="turn-order"
                 className="space-y-2"
@@ -409,9 +387,9 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
                 {battleCharacters.map((char, index) => {
                   const character = getCharacterById(char.characterId);
                   if (!character) return null;
-                  
+
                   const isAlly = selectedTeamId && teams.find(t => t.id === selectedTeamId)?.characterIds.includes(char.characterId);
-                  
+
                   return (
                     <DraggableItem
                       key={`char-${char.characterId}`}
@@ -441,7 +419,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
             </div>
           )}
         </TabsContent>
-        
+
         <TabsContent value="battle" className="mt-0">
           {/* Battle Arena */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -452,9 +430,9 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
                 {battleState.allies.map(ally => {
                   const character = getCharacterById(ally.characterId);
                   if (!character) return null;
-                  
+
                   const isActive = activeCharacter?.characterId === ally.characterId;
-                  
+
                   return (
                     <BattleCharacter
                       key={ally.characterId}
@@ -469,7 +447,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
                     />
                   );
                 })}
-                
+
                 {battleState.allies.length === 0 && (
                   <div className="text-center p-6 border border-dashed border-gray-700 rounded-md">
                     <p className="text-gray-400">No allies in battle</p>
@@ -486,9 +464,9 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
                 {battleState.opponents.map(opponent => {
                   const character = getCharacterById(opponent.characterId);
                   if (!character) return null;
-                  
+
                   const isActive = activeCharacter?.characterId === opponent.characterId;
-                  
+
                   return (
                     <BattleCharacter
                       key={opponent.characterId}
@@ -504,7 +482,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
                     />
                   );
                 })}
-                
+
                 {battleState.opponents.length === 0 && (
                   <div className="text-center p-6 border border-dashed border-gray-700 rounded-md">
                     <p className="text-gray-400">No opponents in battle</p>
@@ -543,7 +521,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
           </div>
         </TabsContent>
       </Tabs>
-      
+
       {/* Quick Dice Dialog */}
       <Dialog open={showQuickDiceDialog} onOpenChange={setShowQuickDiceDialog}>
         <DialogContent>
@@ -557,7 +535,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
                 : 'Select a dice to roll or enter a custom formula'}
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedAbility && (
             <div className="bg-gray-100 p-3 rounded-md mb-4 text-gray-800 text-sm">
               {selectedAbility.ability.damage && (
@@ -571,7 +549,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
               )}
             </div>
           )}
-          
+
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3 my-4">
             {[4, 6, 8, 10, 12, 20].map(sides => (
               <Button
@@ -584,7 +562,7 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
               </Button>
             ))}
           </div>
-          
+
           <div className="flex gap-3 items-end">
             <div className="flex-1">
               <Label>Custom Roll</Label>
@@ -610,14 +588,14 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
               Roll
             </Button>
           </div>
-          
+
           {diceResult && (
             <div className="bg-gray-100 p-4 rounded-md text-center mt-4">
               <p className="text-sm text-gray-500">{diceResult.formula}</p>
               <p className="text-4xl font-bold text-primary mt-1">{diceResult.result}</p>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button 
               onClick={() => {

@@ -32,17 +32,18 @@ export default function BattleCharacter({
   dragHandleProps
 }: BattleCharacterProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+  const activeAbilities = character.abilities.filter(ability => !ability.isPassive); //Filter out passive abilities
+
   // Calculate HP percentage for health bar
   const hpPercentage = Math.max(0, Math.min(100, (currentHp / character.hp) * 100));
   const healthBarColor = hpPercentage > 60 ? 'bg-green-500' : hpPercentage > 30 ? 'bg-amber-500' : 'bg-red-500';
-  
+
   // Handle updating HP with +/- buttons
   const handleHpChange = (amount: number) => {
     const newHp = Math.max(0, currentHp + amount);
     onUpdateHp(newHp);
   };
-  
+
   // Handle direct HP input
   const handleHpInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newHp = parseInt(e.target.value);
@@ -50,88 +51,11 @@ export default function BattleCharacter({
       onUpdateHp(newHp);
     }
   };
-  
+
   // Handle status update
   const handleStatusChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdateStatus(e.target.value);
   };
-  
-  return (
-    <div className={`
-      p-4 rounded-lg border-2 transition-colors
-      ${isActive ? 'border-primary bg-primary/10' : 'border-gray-700 bg-gray-800/50'}
-      ${isOpponent ? 'border-red-500/50' : ''}
-    `}>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-medium">{character.name}</h3>
-        <span className="text-sm bg-gray-700 px-2 py-1 rounded">
-          Turn {turnOrder}
-        </span>
-      </div>
-      
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-3 text-sm">
-        <div className="bg-gray-700/50 p-2 rounded">
-          <div className="text-gray-400">Initiative</div>
-          <div>{character.initiative}</div>
-        </div>
-        <div className="bg-gray-700/50 p-2 rounded">
-          <div className="text-gray-400">Speed</div>
-          <div>{character.speed}</div>
-        </div>
-        <div className="bg-gray-700/50 p-2 rounded">
-          <div className="text-gray-400">AC</div>
-          <div>{character.ac}</div>
-        </div>
-      </div>
-
-      {/* HP Bar */}
-      <div className="mb-3">
-        <div className="flex justify-between text-sm mb-1">
-          <span>HP</span>
-          <span>{currentHp} / {character.hp}</span>
-        </div>
-        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-          <div 
-            className={`h-full ${healthBarColor} transition-all`}
-            style={{ width: `${hpPercentage}%` }}
-          />
-        </div>
-        <div className="flex gap-2 mt-2">
-          <button
-            onClick={() => handleHpChange(-1)}
-            className="px-2 py-1 bg-red-500/20 rounded hover:bg-red-500/30"
-          >
-            -1
-          </button>
-          <input
-            type="number"
-            value={currentHp}
-            onChange={handleHpInput}
-            className="w-16 bg-gray-700 rounded px-2 text-center"
-          />
-          <button
-            onClick={() => handleHpChange(1)}
-            className="px-2 py-1 bg-green-500/20 rounded hover:bg-green-500/30"
-          >
-            +1
-          </button>
-        </div>
-      </div>
-
-      {/* Status */}
-      <div>
-        <label className="text-sm text-gray-400 block mb-1">Status</label>
-        <input
-          type="text"
-          value={status}
-          onChange={handleStatusChange}
-          placeholder="Enter status effects..."
-          className="w-full bg-gray-700 rounded px-3 py-1"
-        />
-      </div>
-    </div>
-  );
 
   return (
     <Collapsible 
@@ -147,7 +71,7 @@ export default function BattleCharacter({
         {isActive && (
           <div className={`absolute top-0 left-0 w-1 h-full ${isOpponent ? 'bg-error' : 'bg-primary'}`}></div>
         )}
-        
+
         {/* Character Header with Drag Handle */}
         <div className="p-3">
           <div className="flex items-center justify-between">
@@ -171,7 +95,7 @@ export default function BattleCharacter({
               </button>
             </CollapsibleTrigger>
           </div>
-          
+
           {/* Health Bar */}
           <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
             <div 
@@ -179,7 +103,7 @@ export default function BattleCharacter({
               style={{ width: `${hpPercentage}%` }}
             ></div>
           </div>
-          
+
           {/* Character Stats */}
           <div className="mt-2 grid grid-cols-4 gap-1 text-xs text-gray-300">
             <div>HP: {currentHp}/{character.hp}</div>
@@ -189,7 +113,7 @@ export default function BattleCharacter({
           </div>
         </div>
       </div>
-      
+
       {/* Collapsible Content */}
       <CollapsibleContent>
         <div className="p-3 pt-0 border-t border-gray-700 mt-2">
@@ -233,54 +157,31 @@ export default function BattleCharacter({
               />
             </div>
           </div>
-          
+
           {/* Abilities Section */}
           <div>
-            <label className="block text-gray-300 text-xs mb-2">Abilities</label>
-            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-              {character.abilities.map(ability => (
-                <div 
-                  key={ability.id}
-                  className={`p-2 rounded-md border border-gray-700 hover:border-primary cursor-pointer ${
-                    ability.isPassive ? 'bg-gray-700/50' : 'bg-gray-800/50'
-                  }`}
-                  onClick={() => onUseAbility && !ability.isPassive && onUseAbility(ability)}
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">{ability.name}</span>
-                    {ability.isPassive ? (
-                      <Badge variant="outline" className="text-xs">Passive</Badge>
-                    ) : (
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-6 px-2 text-xs hover:bg-primary/20"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onUseAbility && onUseAbility(ability);
-                        }}
+            {activeAbilities.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <h4 className="text-sm font-medium">Abilities</h4>
+                  <div className="space-y-2">
+                    {activeAbilities.map((ability) => (
+                      <div 
+                        key={ability.id}
+                        className="p-2 bg-gray-800 rounded-md text-sm"
+                        onClick={() => onUseAbility?.(ability)}
                       >
-                        Use
-                      </Button>
-                    )}
+                        <div className="font-medium">{ability.name}</div>
+                        {ability.damage && (
+                          <div className="text-xs text-red-400">Damage: {ability.damage}</div>
+                        )}
+                        {ability.effect && (
+                          <div className="text-xs text-blue-400">Effect: {ability.effect}</div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">{ability.description}</p>
-                  {(ability.damage || ability.range || ability.effect) && (
-                    <div className="grid grid-cols-3 gap-1 mt-1 text-xs">
-                      {ability.damage && (
-                        <div className="text-red-400">DMG: {ability.damage}</div>
-                      )}
-                      {ability.range && (
-                        <div className="text-blue-400">RNG: {ability.range}</div>
-                      )}
-                      {ability.effect && (
-                        <div className="text-amber-400">EFF: {ability.effect}</div>
-                      )}
-                    </div>
-                  )}
                 </div>
-              ))}
-            </div>
+              )}
           </div>
         </div>
       </CollapsibleContent>

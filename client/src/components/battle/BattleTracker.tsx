@@ -239,6 +239,28 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
     return null;
   };
 
+  // Skip turns for characters at 0 HP
+  const advanceTurn = useCallback(() => {
+    setBattleCharacters(prevChars => {
+      let nextIndex = (currentTurn % prevChars.length);
+      let attempts = 0;
+      
+      // Find next valid character (not at 0 HP)
+      while (attempts < prevChars.length) {
+        const nextChar = prevChars[nextIndex];
+        if (nextChar.currentHp > 0) {
+          break;
+        }
+        nextIndex = (nextIndex + 1) % prevChars.length;
+        attempts++;
+      }
+      
+      return prevChars;
+    });
+    
+    setCurrentTurn(prev => prev + 1);
+  }, [currentTurn]);
+
   // Handle reordering characters via drag and drop
   const handleReorderCharacters = useCallback((result: { sourceIndex: number; destinationIndex: number }) => {
     if (typeof result.sourceIndex !== 'number' || typeof result.destinationIndex !== 'number') {

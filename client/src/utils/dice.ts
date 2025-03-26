@@ -5,47 +5,41 @@ export const rollDie = (sides: number): number => {
 
 // Dice rolling utility functions
 export function rollDice(formula: string): { result: number; breakdown: string } {
+  if (typeof formula !== 'string') {
+    throw new Error('Formula must be a string');
+  }
+
   // Normalize the formula by removing spaces
   const normalizedFormula = formula.replace(/\s/g, '');
 
+  // Parse the formula into number of dice, sides, and modifier
+  const match = normalizedFormula.match(/^(\d+)?d(\d+)([+-]\d+)?$/);
+  if (!match) {
+    throw new Error('Invalid dice formula');
+  }
+
+  const [, countStr, sidesStr, modifierStr] = match;
+  const count = parseInt(countStr || '1');
+  const sides = parseInt(sidesStr);
+  const modifier = modifierStr ? parseInt(modifierStr) : 0;
+
+  // Roll the dice
   let total = 0;
-  let breakdown = '';
-  let lastIndex = 0;
-  const rolls: number[][] = [];
-
-  // Match dice notation like "2d6", "1d20", etc.
-  const diceRegex = /(\d+)d(\d+)/g;
-  let match;
-
-  while ((match = diceRegex.exec(normalizedFormula)) !== null) {
-    const [fullMatch, countStr, sidesStr] = match;
-    const count = parseInt(countStr, 10);
-    const sides = parseInt(sidesStr, 10);
-
-    // Roll the dice
-    const diceResults = Array.from({ length: count }, () =>
-      Math.floor(Math.random() * sides) + 1
-    );
-    rolls.push(diceResults);
-
-    const diceTotal = diceResults.reduce((sum, val) => sum + val, 0);
-    total += diceTotal;
-
-    // Update breakdown
-    if (breakdown.length > 0) {
-      breakdown += ' + ';
-    }
-
-    breakdown += diceResults.join(' + ');
+  const rolls: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const roll = Math.floor(Math.random() * sides) + 1;
+    rolls.push(roll);
+    total += roll;
   }
 
-  // Add any modifiers
-  const modifierMatch = normalizedFormula.match(/[+-]\d+$/);
-  if (modifierMatch) {
-    const modifier = parseInt(modifierMatch[0], 10);
-    total += modifier;
-    breakdown += ` ${modifier >= 0 ? '+' : ''} ${modifier}`;
-  }
+  // Add modifier
+  total += modifier;
 
-  return { result: total, breakdown };
+  // Create breakdown string
+  const breakdown = `[${rolls.join(' + ')}]${modifier ? (modifier > 0 ? ' + ' + modifier : ' - ' + Math.abs(modifier)) : ''}`;
+
+  return {
+    result: total,
+    breakdown
+  };
 }

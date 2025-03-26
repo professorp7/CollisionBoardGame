@@ -15,7 +15,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Character routes
   app.get("/api/characters", async (req, res) => {
     try {
-      let characters;
+      let characters = [];
       
       if (req.query.public === "true") {
         // Return public characters
@@ -23,9 +23,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (req.isAuthenticated()) {
         // Return user's characters
         characters = await storage.getCharacters(req.user!.id);
-      } else {
-        // Return empty array if not authenticated and not asking for public
-        characters = [];
       }
       
       res.json(characters);
@@ -117,14 +114,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team routes
   app.get("/api/teams", async (req, res) => {
     try {
-      let teams;
+      let teams = [];
       
       if (req.isAuthenticated()) {
         // Return user's teams
         teams = await storage.getTeams(req.user!.id);
-      } else {
-        // Return empty array if not authenticated
-        teams = [];
       }
       
       res.json(teams);
@@ -216,14 +210,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Battle routes
   app.get("/api/battles", async (req, res) => {
     try {
-      let battles;
+      let battles = [];
       
       if (req.isAuthenticated()) {
         // Return user's battles
         battles = await storage.getBattles(req.user!.id);
-      } else {
-        // Return empty array if not authenticated
-        battles = [];
       }
       
       res.json(battles);

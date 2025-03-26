@@ -1,28 +1,35 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useState } from "react";
 import {
   useQuery,
   useMutation,
+  QueryClient,
   UseMutationResult,
 } from "@tanstack/react-query";
 import { PublicUser, InsertUser } from "@shared/schema";
-import { queryClient, apiRequest } from "../lib/queryClient";
+import { queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-type AuthContextType = {
+// Define the login data type
+type LoginData = Pick<InsertUser, "username" | "password">;
+
+// Define the auth context type
+interface AuthContextType {
   user: PublicUser | null;
   isLoading: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<PublicUser, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<PublicUser, Error, InsertUser>;
-};
+}
 
-type LoginData = Pick<InsertUser, "username" | "password">;
+// Create the context
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthContext = createContext<AuthContextType | null>(null);
-
+// Provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  
+  // Fetch user data
   const {
     data: user,
     error,
@@ -31,24 +38,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: async () => {
       try {
-        const res = await apiRequest("GET", "/api/user");
+        const res = await fetch("/api/user", {
+          credentials: "include",
+        });
+        
         if (res.status === 401) {
           return null;
         }
+        
+        if (!res.ok) {
+          throw new Error("Failed to fetch user data");
+        }
+        
         return await res.json();
       } catch (err) {
+        console.error("Error fetching user:", err);
         return null;
       }
     }
   });
 
+  // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+        credentials: "include",
+      });
+      
       if (!res.ok) {
-        const error = await res.json();
+        if (res.status === 401) {
+          throw new Error("Invalid username or password");
+        }
+        const error = await res.json().catch(() => ({}));
         throw new Error(error.message || "Login failed");
       }
+      
       return await res.json();
     },
     onSuccess: (user: PublicUser) => {
@@ -67,13 +94,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+        credentials: "include",
+      });
+      
       if (!res.ok) {
-        const error = await res.json();
+        const error = await res.json().catch(() => ({}));
         throw new Error(error.message || "Registration failed");
       }
+      
       return await res.json();
     },
     onSuccess: (user: PublicUser) => {
@@ -92,11 +127,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/logout");
+      const res = await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      
       if (!res.ok) {
-        const error = await res.json();
+        const error = await res.json().catch(() => ({}));
         throw new Error(error.message || "Logout failed");
       }
     },
@@ -135,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Hook to use the auth context
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

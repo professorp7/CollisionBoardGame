@@ -45,7 +45,6 @@ export default function DiceRoller({
   onSaveCurrentRoll,
   className = ""
 }: DiceRollerProps) {
-  const { dispatch } = useAppContext();
   const handleDiceCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
     if (!isNaN(value) && value >= 1 && value <= 10) {
@@ -61,9 +60,7 @@ export default function DiceRoller({
   };
 
   const handleRollDie = (sides: number) => {
-    const formula = `1d${sides}`;
-    const result = rollDice(formula);
-    dispatch({ type: 'SET_CURRENT_ROLL', payload: result });
+    onRollDie(sides);
   };
 
 

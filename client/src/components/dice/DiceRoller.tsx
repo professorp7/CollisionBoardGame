@@ -3,6 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAppContext } from "../../contexts/AppContext";
+import { rollDice } from "../../utils/dice";
 
 interface DiceRollerProps {
   onRollDie: (sides: number) => void;
@@ -43,18 +45,33 @@ export default function DiceRoller({
   onSaveCurrentRoll,
   className = ""
 }: DiceRollerProps) {
+  const { dispatch } = useAppContext();
   const handleDiceCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
     if (!isNaN(value) && value >= 1 && value <= 10) {
       setCustomDiceCount(value);
     }
   };
-  
+
   const handleModifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
     if (!isNaN(value)) {
       setCustomDiceModifier(value);
     }
+  };
+
+  const handleRollDie = (sides: number) => {
+    const result = rollDice(1, sides, 0);
+    dispatch({ type: 'SET_CURRENT_ROLL', payload: result });
+  };
+
+
+  const handleRollCustom = () => {
+    const numDice = customDiceCount;
+    const dieType = parseInt(customDiceType);
+    const modifier = customDiceModifier;
+    const result = rollDice(numDice, dieType, modifier);
+    dispatch({ type: 'SET_CURRENT_ROLL', payload: result });
   };
 
   return (
@@ -69,7 +86,7 @@ export default function DiceRoller({
               <Button
                 variant="primary"
                 className="dice w-full aspect-square bg-primary text-white rounded-lg shadow-md flex items-center justify-center hover:bg-primary-dark transition"
-                onClick={() => onRollDie(sides)}
+                onClick={() => handleRollDie(sides)}
               >
                 <span className="text-2xl font-mono">d{sides}</span>
               </Button>
@@ -116,7 +133,7 @@ export default function DiceRoller({
               />
             </div>
             <div className="flex items-end">
-              <Button onClick={onRollCustom}>Roll</Button>
+              <Button onClick={handleRollCustom}>Roll</Button>
             </div>
           </div>
         </div>

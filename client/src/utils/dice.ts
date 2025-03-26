@@ -3,98 +3,49 @@ export const rollDie = (sides: number): number => {
   return Math.floor(Math.random() * sides) + 1;
 };
 
-// Parse and roll dice from a formula like "2d6+3"
-export const rollDiceFormula = (formula: string): { 
-  result: number; 
-  breakdown: string;
-} => {
-  // Normalize the formula by removing all spaces
-  const normalizedFormula = formula.replace(/\s+/g, '').toLowerCase();
-  
-  // Match parts like "2d6", "1d20", etc.
-  const diceRegex = /(\d+)d(\d+)/g;
-  let match: RegExpExecArray | null;
+// Dice rolling utility functions
+export function rollDice(formula: string): { result: number; breakdown: string } {
+  // Normalize the formula by removing spaces
+  const normalizedFormula = formula.replace(/\s/g, '');
+
   let total = 0;
   let breakdown = '';
   let lastIndex = 0;
-  let rolls: {count: number; sides: number; results: number[]}[] = [];
-  
-  // Find all dice expressions
+  const rolls: number[][] = [];
+
+  // Match dice notation like "2d6", "1d20", etc.
+  const diceRegex = /(\d+)d(\d+)/g;
+  let match;
+
   while ((match = diceRegex.exec(normalizedFormula)) !== null) {
     const [fullMatch, countStr, sidesStr] = match;
-    const count = parseInt(countStr);
-    const sides = parseInt(sidesStr);
-    
+    const count = parseInt(countStr, 10);
+    const sides = parseInt(sidesStr, 10);
+
     // Roll the dice
-    const diceResults: number[] = [];
-    for (let i = 0; i < count; i++) {
-      diceResults.push(rollDie(sides));
-    }
-    
-    rolls.push({
-      count,
-      sides,
-      results: diceResults
-    });
-    
-    // Add modifiers from the formula between dice expressions
-    if (match.index > lastIndex) {
-      const modifierStr = normalizedFormula.substring(lastIndex, match.index);
-      if (modifierStr.match(/[+\-*/]/)) {
-        try {
-          // Evaluate the modifier
-          total = eval(`${total}${modifierStr}`);
-          breakdown += modifierStr;
-        } catch (e) {
-          console.error('Error evaluating dice modifier:', e);
-        }
-      }
-    }
-    
-    // Add dice total to the total
+    const diceResults = Array.from({ length: count }, () =>
+      Math.floor(Math.random() * sides) + 1
+    );
+    rolls.push(diceResults);
+
     const diceTotal = diceResults.reduce((sum, val) => sum + val, 0);
     total += diceTotal;
-    
+
     // Update breakdown
-    if (breakdown.length > 0 && !breakdown.endsWith('+') && !breakdown.endsWith('-')) {
-      breakdown += '+';
+    if (breakdown.length > 0) {
+      breakdown += ' + ';
     }
-    
-    // Add dice results to breakdown
-    if (count === 1) {
-      breakdown += diceResults[0];
-    } else {
-      breakdown += `(${diceResults.join('+')})`;
-    }
-    
-    lastIndex = match.index + fullMatch.length;
+
+    breakdown += diceResults.join(' + ');
   }
-  
-  // Add any trailing modifiers
-  if (lastIndex < normalizedFormula.length) {
-    const trailingStr = normalizedFormula.substring(lastIndex);
-    if (trailingStr.match(/^[+\-*/]\d+/)) {
-      try {
-        // Evaluate the trailing modifier
-        total = eval(`${total}${trailingStr}`);
-        breakdown += trailingStr;
-      } catch (e) {
-        console.error('Error evaluating trailing dice modifier:', e);
-      }
-    }
+
+  // Add any modifiers
+  const modifierMatch = normalizedFormula.match(/[+-]\d+$/);
+  if (modifierMatch) {
+    const modifier = parseInt(modifierMatch[0], 10);
+    total += modifier;
+    breakdown += ` ${modifier >= 0 ? '+' : ''} ${modifier}`;
   }
-  
-  // If no dice were found, try evaluating as a simple expression
-  if (rolls.length === 0) {
-    try {
-      total = eval(normalizedFormula);
-      breakdown = total.toString();
-    } catch (e) {
-      console.error('Error evaluating dice formula:', e);
-      total = 0;
-      breakdown = 'Invalid formula';
-    }
-  }
-  
+
   return { result: total, breakdown };
-};
+}

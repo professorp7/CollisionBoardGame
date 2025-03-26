@@ -89,7 +89,9 @@ export class MemStorage implements IStorage {
 
   async createTeam(team: InsertTeam): Promise<Team> {
     const id = this.teamIdCounter++;
-    const newTeam: Team = { ...team, id };
+    // Initialize characterAbilities if not provided
+    const characterAbilities = team.characterAbilities || {};
+    const newTeam: Team = { ...team, characterAbilities, id };
     this.teams.set(id, newTeam);
     return newTeam;
   }

@@ -22,7 +22,10 @@ export default function TeamBuilder({
 }: TeamBuilderProps) {
   const [name, setName] = useState("");
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<number[]>([]);
+  const [selectedCharacterAbilities, setSelectedCharacterAbilities] = useState<Record<number, string[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCharacterForAbilities, setSelectedCharacterForAbilities] = useState<Character | null>(null);
+  const [showAbilitySelection, setShowAbilitySelection] = useState(false);
   const { toast } = useToast();
 
   // Initialize form when a team is selected
@@ -30,10 +33,12 @@ export default function TeamBuilder({
     if (team) {
       setName(team.name);
       setSelectedCharacterIds(team.characterIds);
+      setSelectedCharacterAbilities(team.characterAbilities || {});
     } else {
       // Reset form
       setName("");
       setSelectedCharacterIds([]);
+      setSelectedCharacterAbilities({});
     }
   }, [team]);
 
@@ -50,13 +55,35 @@ export default function TeamBuilder({
     const updatedTeam: Team = {
       id: team?.id || 0,
       name,
-      characterIds: selectedCharacterIds
+      characterIds: selectedCharacterIds,
+      characterAbilities: selectedCharacterAbilities
     };
     
     onSave(updatedTeam);
     toast({
       title: "Success",
       description: team?.id ? "Team updated" : "Team created",
+    });
+  };
+  
+  // Open ability selection dialog for a character
+  const handleSelectAbilities = (character: Character) => {
+    setSelectedCharacterForAbilities(character);
+    setShowAbilitySelection(true);
+  };
+  
+  // Save the selected abilities for a character
+  const handleSaveAbilities = (characterId: number, selectedAbilityIds: string[]) => {
+    setSelectedCharacterAbilities({
+      ...selectedCharacterAbilities,
+      [characterId]: selectedAbilityIds
+    });
+    setShowAbilitySelection(false);
+    setSelectedCharacterForAbilities(null);
+    
+    toast({
+      title: "Abilities Updated",
+      description: `Selected ${selectedAbilityIds.length}/7 abilities for battle`,
     });
   };
   
@@ -166,31 +193,53 @@ export default function TeamBuilder({
                   <p className="text-sm text-gray-500 mt-1">Select characters from the list above</p>
                 </div>
               ) : (
-                selectedCharacters.map(character => (
-                  <div
-                    key={character.id}
-                    className="border rounded-md p-3 bg-white flex justify-between items-center"
-                  >
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full mr-3">
-                        <i className="fas fa-user"></i>
-                      </div>
-                      <div>
-                        <div className="font-medium">{character.name}</div>
-                        <div className="text-xs text-gray-500">
-                          HP: {character.hp} | AC: {character.ac} | Speed: {character.speed}
+                selectedCharacters.map(character => {
+                  const selectedAbilityCount = selectedCharacterAbilities[character.id]?.length || 0;
+                  
+                  return (
+                    <div
+                      key={character.id}
+                      className="border rounded-md p-3 bg-white"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full mr-3">
+                            <i className="fas fa-user"></i>
+                          </div>
+                          <div>
+                            <div className="font-medium">{character.name}</div>
+                            <div className="text-xs text-gray-500">
+                              HP: {character.hp} | AC: {character.ac} | Speed: {character.speed}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          <button
+                            className="text-gray-400 hover:text-destructive transition ml-2"
+                            title="Remove from team"
+                            onClick={() => handleRemoveCharacter(character.id)}
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
                         </div>
                       </div>
+                      <div className="mt-2 pt-2 border-t flex justify-between items-center">
+                        <div className="text-xs text-gray-500">
+                          <span className={selectedAbilityCount === 0 ? 'text-amber-500' : ''}>
+                            Abilities: {selectedAbilityCount}/7 selected
+                          </span>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleSelectAbilities(character)}
+                        >
+                          <i className="fas fa-cog mr-1"></i> Manage Abilities
+                        </Button>
+                      </div>
                     </div>
-                    <button
-                      className="text-gray-400 hover:text-destructive transition"
-                      title="Remove from team"
-                      onClick={() => handleRemoveCharacter(character.id)}
-                    >
-                      <i className="fas fa-times"></i>
-                    </button>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

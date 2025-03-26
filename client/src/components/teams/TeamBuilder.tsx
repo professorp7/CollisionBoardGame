@@ -29,6 +29,7 @@ export default function TeamBuilder({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCharacterForAbilities, setSelectedCharacterForAbilities] = useState<Character | null>(null);
   const [showAbilitySelection, setShowAbilitySelection] = useState(false);
+  const [tempSelectedAbilityIds, setTempSelectedAbilityIds] = useState<string[]>([]);
   const { toast } = useToast();
 
   // Initialize form when a team is selected
@@ -45,6 +46,17 @@ export default function TeamBuilder({
     }
   }, [team]);
 
+  // Initialize ability selection when character changes
+  useEffect(() => {
+    if (selectedCharacterForAbilities) {
+      // Initialize with current selection or empty array
+      setTempSelectedAbilityIds(
+        selectedCharacterAbilities[selectedCharacterForAbilities.id] || []
+      );
+    }
+  }, [selectedCharacterForAbilities, selectedCharacterAbilities]);
+
+  // Handle save team
   const handleSave = () => {
     if (!name.trim()) {
       toast({
@@ -55,7 +67,7 @@ export default function TeamBuilder({
       return;
     }
     
-    const updatedTeam: Team = {
+    const updatedTeam = {
       id: team?.id || 0,
       name,
       characterIds: selectedCharacterIds,
@@ -90,51 +102,17 @@ export default function TeamBuilder({
     });
   };
   
+  // Add character to team
   const handleAddCharacter = (id: number) => {
     if (!selectedCharacterIds.includes(id)) {
       setSelectedCharacterIds([...selectedCharacterIds, id]);
     }
   };
   
+  // Remove character from team
   const handleRemoveCharacter = (id: number) => {
     setSelectedCharacterIds(selectedCharacterIds.filter(charId => charId !== id));
   };
-  
-  // Filter available characters based on search
-  const filteredCharacters = allCharacters.filter(character => 
-    character.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    !selectedCharacterIds.includes(character.id)
-  );
-  
-  // Get selected characters
-  const selectedCharacters = selectedCharacterIds
-    .map(id => allCharacters.find(c => c.id === id))
-    .filter(Boolean) as Character[];
-
-  if (!team) {
-    return (
-      <Card className="w-full md:w-2/3 h-[calc(100vh-180px)]">
-        <CardContent className="pt-6 flex h-full items-center justify-center">
-          <div className="text-center text-gray-500">
-            <i className="fas fa-users text-4xl mb-2"></i>
-            <p>Select a team from the list or create a new one</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // For ability selection dialog
-  const [tempSelectedAbilityIds, setTempSelectedAbilityIds] = useState<string[]>([]);
-  
-  useEffect(() => {
-    if (selectedCharacterForAbilities) {
-      // Initialize with current selection or empty array
-      setTempSelectedAbilityIds(
-        selectedCharacterAbilities[selectedCharacterForAbilities.id] || []
-      );
-    }
-  }, [selectedCharacterForAbilities, selectedCharacterAbilities]);
   
   // Toggle ability selection in dialog
   const toggleAbilitySelection = (abilityId: string) => {
@@ -153,6 +131,32 @@ export default function TeamBuilder({
     }
   };
   
+  // Filter available characters based on search
+  const filteredCharacters = allCharacters.filter(character => 
+    character.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    !selectedCharacterIds.includes(character.id)
+  );
+  
+  // Get selected characters
+  const selectedCharacters = selectedCharacterIds
+    .map(id => allCharacters.find(c => c.id === id))
+    .filter(Boolean) as Character[];
+
+  // Render empty state if no team is selected
+  if (!team) {
+    return (
+      <Card className="w-full md:w-2/3 h-[calc(100vh-180px)]">
+        <CardContent className="pt-6 flex h-full items-center justify-center">
+          <div className="text-center text-gray-500">
+            <i className="fas fa-users text-4xl mb-2"></i>
+            <p>Select a team from the list or create a new one</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // Return main team builder UI
   return (
     <>
       <Card className="w-full md:w-2/3 h-[calc(100vh-180px)]">

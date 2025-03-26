@@ -252,7 +252,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/battles", async (req, res) => {
     try {
-      const battleData = insertBattleSchema.parse(req.body);
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const battleData = insertBattleSchema.parse({
+        ...req.body,
+        userId: req.user!.id // Add the current user's ID
+      });
+      
       const newBattle = await storage.createBattle(battleData);
       res.status(201).json(newBattle);
     } catch (error) {

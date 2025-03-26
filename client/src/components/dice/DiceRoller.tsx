@@ -61,7 +61,8 @@ export default function DiceRoller({
   };
 
   const handleRollDie = (sides: number) => {
-    const result = rollDice(1, sides, 0);
+    const formula = `1d${sides}`;
+    const result = rollDice(formula);
     dispatch({ type: 'SET_CURRENT_ROLL', payload: result });
   };
 

@@ -85,9 +85,11 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
         if (character) {
           allBattleCharacters.push({
             characterId: charId,
+            uniqueId: `ally-${charId}-${Date.now()}-${index}`,
             currentHp: character.hp,
             status: '',
-            turnOrder: index + 1 // Initial turn order based on team order
+            turnOrder: index + 1,
+            isAlly: true
           });
         }
       });
@@ -100,9 +102,11 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
         if (character) {
           allBattleCharacters.push({
             characterId: charId,
+            uniqueId: `opponent-${charId}-${Date.now()}-${index}`,
             currentHp: character.hp,
             status: '',
-            turnOrder: allBattleCharacters.length + index + 1 // Continue turn order from allies
+            turnOrder: allBattleCharacters.length + index + 1,
+            isAlly: false
           });
         }
       });
@@ -392,8 +396,8 @@ export default function BattleTracker({ characters, onEndBattle }: BattleTracker
 
                   return (
                     <DraggableItem
-                      key={`char-${char.characterId}`}
-                      id={`char-${char.characterId}`}
+                      key={char.uniqueId}
+                      id={char.uniqueId}
                       index={index}
                       data={char}
                       onDragEnd={() => {}} // Handled by the Droppable
